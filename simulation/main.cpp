@@ -17,6 +17,7 @@
 #include <mpi.h>
 
 #include "../common/timer.hpp"
+#include "../plot/vti_writer.hpp"
 #include "gray-scott.h"
 
 #include "dataspaces.h"
@@ -68,6 +69,36 @@ int ds_put(void* databuf, size_t bufsize, char* var_name, int timestep, const ch
 
 }
 
+int ds_get(void* databuf, size_t bufsize, char* var_name, int timestep, const char* lock_name)
+{
+    // DataSpaces: Read-Lock Mechanism
+	// Usage: Prevent other processies from changing the 
+	// 	  data while we are working with it
+    dspaces_lock_on_read(lock_name, NULL);
+
+    printf("Timestep %d: get compressed data\n", timestep);
+
+    // Define the dimensionality of the data to be received 
+	int ndim = 1; 
+		
+	// Prepare LOWER and UPPER bound dimensions
+	uint64_t lb[3] = {0}, ub[3] = {0};
+
+    ub[0] = bufsize;
+
+    // DataSpaces: Get data array from the space
+	// Usage: dspaces_get(Name of variable, version num, 
+	// size (in bytes of each element), dimensions for bounding box,
+	// lower bound coordinates, upper bound coordinates,
+	// ptr to data buffer 
+	dspaces_get(var_name, timestep, 1*sizeof(char), ndim, lb, ub, databuf);
+
+    // DataSpaces: Release our lock on the data
+	dspaces_unlock_on_read(lock_name, NULL);
+
+    return 0;
+}
+
 /*
 void print_io_settings(const adios2::IO &io)
 {
@@ -114,9 +145,7 @@ int main(int argc, char **argv)
     MPI_Comm_size(comm, &procs);
 
     MPI_Comm gcomm = MPI_COMM_WORLD;
-    std::cout << "DEBUG1" << std::endl;
     dspaces_init(procs, 1, &gcomm, NULL);
-    std::cout << "DEBUG2" << std::endl;
 
     if (argc < 2) {
         if (rank == 0) {
@@ -152,19 +181,29 @@ int main(int argc, char **argv)
     Timer timer_total;
     Timer timer_compute;
     Timer timer_write;
+    Timer timer_read;
+
+    double time_step;
+    double time_compute;
+    double time_write;
+    double time_read;
 
 #ifdef ENABLE_COMPRESSION
     Timer timer_compression;
+    Timer timer_decompression;
+
+    double time_compression;
+    double time_decompression;
 #endif  
 
     std::ostringstream log_fname;
     log_fname << "gray_scott_pe_" << rank << ".log";
 #ifdef ENABLE_COMPRESSION
     std::ofstream log(log_fname.str());
-    log << "step\ttotal_gs\tcompute_gs\tcompression_gs\twrite_gs" << std::endl;
+    log << "step\ttotal_gs\tcompute_gs\tcompression_gs\twrite_gs\tdecompression_gs\tread_gs" << std::endl;
 #else
     std::ofstream log(log_fname.str());
-    log << "step\ttotal_gs\tcompute_gs\twrite_gs" << std::endl;
+    log << "step\ttotal_gs\tcompute_gs\twrite_gs\tread_gs" << std::endl;
 #endif    
 #endif
 
@@ -181,7 +220,7 @@ int main(int argc, char **argv)
         }
 
 #ifdef ENABLE_TIMERS
-        double time_compute = timer_compute.stop();
+        time_compute = timer_compute.stop();
         MPI_Barrier(comm);
 #endif
 
@@ -203,11 +242,16 @@ int main(int argc, char **argv)
 
 #endif
 
-        double *u_array = (double*) malloc(u.size()*sizeof(double));
-        double *v_array = (double*) malloc(v.size()*sizeof(double));
+        //double *u_array = (double*) malloc(u.size()*sizeof(double));
+        //double *v_array = (double*) malloc(v.size()*sizeof(double));
 
-        std::copy(u.begin(), u.end(), u_array);
-        std::copy(v.begin(), v.end(), v_array);
+        //std::copy(u.begin(), u.end(), u_array);
+        //std::copy(v.begin(), v.end(), v_array);
+        std::string u_image_name = "u_img_r" + std::to_string(rank) + "_t" + std::to_string(i);
+        std::string v_image_name = "v_img_r" + std::to_string(rank) + "_t" + std::to_string(i);
+        vti_writer(u.data(), sim.size_x, sim.size_y, sim.size_z, u_image_name);
+        vti_writer(v.data(), sim.size_x, sim.size_y, sim.size_z, v_image_name);
+        
 
 #ifdef ENABLE_COMPRESSION
 
@@ -216,7 +260,7 @@ int main(int argc, char **argv)
         timer_compression.start();
 #endif
 
-
+        //FILE *fp = NULL;
 
         /* Compression Init */
         zfp_type type;     /* array scalar type */
@@ -231,8 +275,8 @@ int main(int argc, char **argv)
 
         /* allocate meta data for the 3D array a[nz][ny][nx] */
         type = zfp_type_double;
-        u_field = zfp_field_3d(u_array, type, sim.size_x, sim.size_y, sim.size_z);
-        v_field = zfp_field_3d(v_array, type, sim.size_x, sim.size_y, sim.size_z);
+        u_field = zfp_field_3d(u.data(), type, sim.size_x, sim.size_y, sim.size_z);
+        v_field = zfp_field_3d(v.data(), type, sim.size_x, sim.size_y, sim.size_z);
 
         /* allocate meta data for a compressed stream */
         u_zfp = zfp_stream_open(NULL);
@@ -263,7 +307,7 @@ int main(int argc, char **argv)
         v_zfpsize = zfp_compress(v_zfp, v_field);
 
 #ifdef ENABLE_TIMERS
-        double time_compression = timer_compression.stop();
+        time_compression = timer_compression.stop();
         MPI_Barrier(comm);
 #endif        
         
@@ -272,10 +316,7 @@ int main(int argc, char **argv)
             exit(1);
         }
         else {
-#ifdef ENABLE_TIMERS
-        MPI_Barrier(comm);
-        timer_write.start();
-#endif
+
 
 
             char u_var_name[128];
@@ -284,10 +325,109 @@ int main(int argc, char **argv)
             sprintf(v_var_name, "v_compressed_data");
             const char* u_lock_name = "u_compressed_lock";
             const char* v_lock_name = "v_compressed_lock";
+
+#ifdef ENABLE_TIMERS
+        MPI_Barrier(comm);
+        timer_write.start();
+#endif
+            //fp = fopen("./u_before.dat", "w");
+            //fwrite(u_buffer, 1, u_zfpsize, fp);
+            //fclose(fp);
+
+            printf("Sending... u_zfpsize: %u, v_zfpsize: %u. \n", u_zfpsize, v_zfpsize);
             ds_put(u_buffer, u_zfpsize, u_var_name, i, u_lock_name);
             ds_put(v_buffer, v_zfpsize, v_var_name, i, v_lock_name);
 
+#ifdef ENABLE_TIMERS
+        time_write = timer_write.stop();
+        MPI_Barrier(comm);
+#endif
+
+            sleep(2);
+
+            std::vector<double> u_recv(sim.size_x*sim.size_y*sim.size_z);
+            std::vector<double> v_recv(sim.size_x*sim.size_y*sim.size_z);
+
+            zfp_field *u_field_recv, *v_field_recv;
+            zfp_stream *u_zfp_recv, *v_zfp_recv;
+            void *u_buffer_recv, *v_buffer_recv;
+            size_t u_bufsize_recv, v_bufsize_recv;
+            bitstream *u_stream_recv, *v_stream_recv;
+
+            u_field_recv = zfp_field_3d(u_recv.data(), type, sim.size_x, sim.size_y, sim.size_z);
+            v_field_recv = zfp_field_3d(v_recv.data(), type, sim.size_x, sim.size_y, sim.size_z);
+
+            u_zfp_recv = zfp_stream_open(NULL);
+            v_zfp_recv = zfp_stream_open(NULL);
+
+            zfp_stream_set_accuracy(u_zfp_recv, (u_max-u_min)*torlerance);
+            zfp_stream_set_accuracy(v_zfp_recv, (v_max-v_min)*torlerance);
+
+            u_bufsize_recv = zfp_stream_maximum_size(u_zfp_recv, u_field_recv);
+            v_bufsize_recv = zfp_stream_maximum_size(v_zfp_recv, v_field_recv);
+            u_buffer_recv = malloc(u_bufsize_recv);
+            v_buffer_recv = malloc(v_bufsize_recv);
+            
+
+#ifdef ENABLE_TIMERS
+        MPI_Barrier(comm);
+        timer_read.start();
+#endif
+            //fp = fopen("./u_before.dat", "r");
+            //fwrite(u_recv.data(), 1, u_zfpsize, fp);
+            //fclose(fp);
+            printf("Recving... u_zfpsize: %u, v_zfpsize: %u. \n", u_zfpsize, v_zfpsize);
+            ds_get(u_buffer_recv, u_zfpsize, u_var_name, i, u_lock_name);
+            ds_get(v_buffer_recv, v_zfpsize, v_var_name, i, v_lock_name);
+
+#ifdef ENABLE_TIMERS
+        time_read = timer_read.stop();
+        MPI_Barrier(comm);
+#endif
+
+#ifdef ENABLE_TIMERS
+        MPI_Barrier(comm);
+        timer_decompression.start();
+#endif
+            
+
+            u_stream_recv = stream_open(u_buffer_recv, u_bufsize_recv);
+            v_stream_recv = stream_open(v_buffer_recv, v_bufsize_recv);
+            zfp_stream_set_bit_stream(u_zfp_recv, u_stream_recv);
+            zfp_stream_set_bit_stream(v_zfp_recv, v_stream_recv);
+            zfp_stream_rewind(u_zfp_recv);
+            zfp_stream_rewind(v_zfp_recv);
+
+            if(!(zfp_decompress(u_zfp_recv, u_field_recv) && zfp_decompress(v_zfp_recv, v_field_recv)))
+            {
+                fprintf(stderr, "decompression failed\n");
+                exit(1);
+            }
+            else
+            {
+
+#ifdef ENABLE_TIMERS
+        time_decompression = timer_decompression.stop();
+        MPI_Barrier(comm);
+#endif          
+
+                std::string u_compression_image_name = "u_compression_img_r" + std::to_string(rank) + "_t" + std::to_string(i);
+                std::string v_compression_image_name = "v_compression_img_r" + std::to_string(rank) + "_t" + std::to_string(i);
+                vti_writer(u_recv.data(), sim.size_x, sim.size_y, sim.size_z, u_compression_image_name);
+                vti_writer(v_recv.data(), sim.size_x, sim.size_y, sim.size_z, v_compression_image_name);
+            }
+
+            zfp_field_free(u_field_recv);
+            zfp_field_free(v_field_recv);
+            zfp_stream_close(u_zfp_recv);
+            zfp_stream_close(v_zfp_recv);
+            stream_close(u_stream_recv);
+            stream_close(v_stream_recv);
+            free(u_buffer_recv);
+            free(v_buffer_recv);
+
         }
+  
 
         /* clean up */
         zfp_field_free(u_field);
@@ -310,8 +450,33 @@ int main(int argc, char **argv)
         sprintf(v_var_name, "v_data");
         const char* u_lock_name = "u_lock";
         const char* v_lock_name = "v_lock";
-        ds_put(u_array, u.size()*sizeof(double), u_var_name, i, u_lock_name);
-        ds_put(v_array, v.size()*sizeof(double), v_var_name, i, v_lock_name);
+        //use u.data()
+        ds_put(u.data(), u.size()*sizeof(double), u_var_name, i, u_lock_name);
+        ds_put(v.data(), v.size()*sizeof(double), v_var_name, i, v_lock_name);
+
+#ifdef ENABLE_TIMERS
+        time_write = timer_write.stop();
+        MPI_Barrier(comm);
+#endif
+
+        sleep(2);
+
+        std::vector<double> u_recv(sim.size_x*sim.size_y*sim.size_z);
+        std::vector<double> v_recv(sim.size_x*sim.size_y*sim.size_z);
+
+#ifdef ENABLE_TIMERS
+        MPI_Barrier(comm);
+        timer_read.start();
+#endif
+
+        ds_get(u_recv.data(), sim.size_x*sim.size_y*sim.size_z*sizeof(double), u_var_name, i, u_lock_name );
+        ds_get(v_recv.data(), sim.size_x*sim.size_y*sim.size_z*sizeof(double), v_var_name, i, v_lock_name );
+
+#ifdef ENABLE_TIMERS
+        time_read = timer_read.stop();
+        MPI_Barrier(comm);
+#endif
+
 
 
 #endif
@@ -326,21 +491,21 @@ int main(int argc, char **argv)
         }
         */
 #ifdef ENABLE_TIMERS
-        double time_write = timer_write.stop();
-        double time_step = timer_total.stop();
+        time_step = timer_total.stop();
         MPI_Barrier(comm);
 
 #ifdef ENABLE_COMPRESSION
         log << i << "\t" << time_step << "\t" << time_compute << "\t"
-            << time_compression << "\t" << time_write << std::endl;
+            << time_compression << "\t" << time_write << "\t"
+            << time_decompression << "\t" << time_read << std::endl;
 #else
         log << i << "\t" << time_step << "\t" << time_compute << "\t"
-            << time_write << std::endl;
+            << time_write << "\t" << time_read << std::endl;
 #endif
 #endif
 
-    free(u_array);
-    free(v_array);
+    //free(u_array);
+    //free(v_array);
     }
 
     //writer_main.close();
@@ -349,10 +514,11 @@ int main(int argc, char **argv)
 
 #ifdef ENABLE_COMPRESSION
     log << "total\t" << timer_total.elapsed() << "\t" << timer_compute.elapsed()
-        << "\t" << timer_compression.elapsed() << "\t" << timer_write.elapsed() << std::endl;
+        << "\t" << timer_compression.elapsed() << "\t" << timer_write.elapsed() 
+        << "\t" << timer_decompression.elapsed() << "\t" << timer_read.elapsed() << std::endl;
 #else
     log << "total\t" << timer_total.elapsed() << "\t" << timer_compute.elapsed()
-        << "\t" << timer_write.elapsed() << std::endl;
+        << "\t" << timer_write.elapsed() << "\t" << timer_read.elapsed() << std::endl;
 #endif
     log.close();
 #endif
