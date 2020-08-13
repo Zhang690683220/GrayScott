@@ -17,9 +17,6 @@ struct Settings {
     bool checkpoint;
     int checkpoint_freq;
     std::string checkpoint_output;
-    std::string adios_config;
-    bool adios_span;
-    bool adios_memory_selection;
     std::string mesh_type;
 
     Settings();

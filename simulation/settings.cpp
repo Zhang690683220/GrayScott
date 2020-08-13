@@ -18,9 +18,6 @@ void to_json(nlohmann::json &j, const Settings &s)
                        {"checkpoint", s.checkpoint},
                        {"checkpoint_freq", s.checkpoint_freq},
                        {"checkpoint_output", s.checkpoint_output},
-                       {"adios_config", s.adios_config},
-                       {"adios_span", s.adios_span},
-                       {"adios_memory_selection", s.adios_memory_selection},
                        {"mesh_type", s.mesh_type}};
 }
 
@@ -39,9 +36,6 @@ void from_json(const nlohmann::json &j, Settings &s)
     j.at("checkpoint").get_to(s.checkpoint);
     j.at("checkpoint_freq").get_to(s.checkpoint_freq);
     j.at("checkpoint_output").get_to(s.checkpoint_output);
-    j.at("adios_config").get_to(s.adios_config);
-    j.at("adios_span").get_to(s.adios_span);
-    j.at("adios_memory_selection").get_to(s.adios_memory_selection);
     j.at("mesh_type").get_to(s.mesh_type);
 }
 
@@ -60,9 +54,6 @@ Settings::Settings()
     checkpoint = false;
     checkpoint_freq = 2000;
     checkpoint_output = "gs_ckpt.bp";
-    adios_config = "adios2.xml";
-    adios_span = false;
-    adios_memory_selection = false;
     mesh_type = "image";
 }
 
