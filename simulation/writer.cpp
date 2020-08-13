@@ -40,7 +40,7 @@ void write(const GrayScott &sim, MPI_Comm comm, int step)
     dspaces_unlock_on_write(LockNameU.c_str(), &comm);
 
     dspaces_lock_on_write(LockNameV.c_str(), &comm);
-    int status = dspaces_put(VarNameV.c_str(),step, sizeof(double) ,3 ,lb ,ub ,v.data());
+    status = dspaces_put(VarNameV.c_str(),step, sizeof(double) ,3 ,lb ,ub ,v.data());
     dspaces_put_sync();
     dspaces_unlock_on_write(LockNameV.c_str(), &comm);
 
