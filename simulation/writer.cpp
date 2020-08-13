@@ -11,7 +11,7 @@ Writer::Writer(MPI_Comm comm ,int proc, int appid)
 
 
 
-void write(const GrayScott &sim, MPI_Comm comm, int step);
+void write(const GrayScott &sim, MPI_Comm comm, int step)
 {
     std::vector<double> u = sim.u_noghost();
     std::vector<double> v = sim.v_noghost();
