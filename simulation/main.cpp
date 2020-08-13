@@ -3,7 +3,6 @@
 #include <sstream>
 #include <vector>
 
-#include <adios2.h>
 #include <mpi.h>
 
 #include "../common/timer.hpp"
