@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "gray-scott.h"
+#include "../simulation/gray-scott.h"
 #include "settings.h"
 #include "dataspaces.h"
 
