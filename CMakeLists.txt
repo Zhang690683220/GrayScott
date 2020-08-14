@@ -44,14 +44,7 @@ endif(VTK_ROOT)
 if (VTK)
   message(STATUS "Configuring VTK apps")
   
-  find_package(VTK COMPONENTS
-    vtkCommonCore
-    vtkFiltersCore
-    vtkFiltersGeneral
-    vtkIOImage
-    vtkIOXML
-    vtkIOParallelXML
-  )
+  find_package(VTK COMPONENTS)
 
   if(VTK_FOUND)
     include(${VTK_USE_FILE})
