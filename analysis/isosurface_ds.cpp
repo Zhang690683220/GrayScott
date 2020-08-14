@@ -2,7 +2,6 @@
 #include <sstream>
 
 #include <vtkAppendPolyData.h>
-#include <vtkAppendFilter.h>
 #include <vtkImageData.h>
 #include <vtkImageImport.h>
 #include <vtkMarchingCubes.h>
@@ -10,8 +9,8 @@
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataWriter.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkXMLPUnstructuredGridWriter.h>
+
+
 
 #include "../common/timer.hpp"
 #include "analysis.h"
@@ -44,31 +43,16 @@ compute_isosurface(const Analysis &anly, const std::vector<double> &field, doubl
     return mcubes->GetOutput();
 }
 
-void write_vtu(const std::string &fname,
-                const vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid,
-                int rank, int timestep)
+void write_vtk(const std::string &fname,
+               const vtkSmartPointer<vtkPolyData> polyData,
+               int rank, int timestep)
 {
-    std::string filename = fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtu";
-    auto writer = vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(unstructuredGrid);
+    std::string filename = fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtk";
+    auto writer = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+    writer->SetFileName(fname.c_str());
+    writer->SetInputData(polyData);
     writer->Write();
 }
-
-void write_pvtu(const std::string &fname,
-                const vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid,
-                int wrank, int timestep)
-{
-    std::string filename = fname + ".Time." + std::to_string(timestep) +".pvtu";
-    auto writer = vtkSmartPointer<vtkXMLPUnstructuredGridWriter>::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(unstructuredGrid);
-    writer->SetNumberOfPieces(wrank);
-    writer->SetStartPiece(0);
-    writer->SetEndPiece(wrank-1);
-    writer->Update();
-}
-
 
 
 void print_settings(const Settings &s)
@@ -141,7 +125,7 @@ int main(int argc, char **argv)
 
         dsreader.read(anly, i);
 
-        auto appendFilter = vtkSmartPointer<vtkAppendFilter>::New();
+        auto appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
         for (const auto isovalue : isovalues) {
             auto polyData = compute_isosurface(anly, anly.u_noghost(), isovalue);
@@ -151,11 +135,9 @@ int main(int argc, char **argv)
         appendFilter->Update();
 
         std::string fname = "grayscott_isosurface";
-        write_vtu(fname, appendFilter->GetOutput(),rank, i);
+        write_vtk(fname, appendFilter->GetOutput(),rank, i);
 
-        if(rank == 0) {
-            write_pvtu(fname, appendFilter->GetOutput(), wrank, i);
-        }
+        
     }
 
     MPI_Finalize();
