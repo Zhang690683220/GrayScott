@@ -13,6 +13,7 @@
 
 
 #include "../common/timer.hpp"
+#include "../simulation/settings.h"
 #include "analysis.h"
 #include "reader.h"
 
