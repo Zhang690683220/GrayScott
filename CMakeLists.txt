@@ -53,6 +53,7 @@ if (VTK)
   )
 
   if(VTK_FOUND)
+    include(${VTK_USE_FILE})
     add_executable(isosurface_ds
       analysis/isosurface_ds.cpp
       analysis/analysis.cpp
