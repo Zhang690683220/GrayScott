@@ -48,8 +48,7 @@ void write_vtu(const std::string &fname,
                 int rank, int timestep)
 {
     std::string filename = fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtu";
-    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
-        vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+    auto writer = vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData(unstructuredGrid);
     writer->Write();
@@ -60,8 +59,7 @@ void write_pvtu(const std::string &fname,
                 int wrank, int timestep)
 {
     std::string filename = fname + ".Time." + std::to_string(timestep) +".pvtu";
-    vtkSmartPointer<vtkXMLPUnstructuredGridWriter> writer =
-        vtkSmartPointer<vtkXMLPUnstructuredGridWriter>::New();
+    auto writer = vtkSmartPointer<vtkXMLPUnstructuredGridWriter>::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData(unstructuredGrid);
     writer->SetNumberOfPieces(wrank);
