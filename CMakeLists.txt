@@ -57,6 +57,7 @@ if (VTK)
     add_executable(isosurface_ds
       analysis/isosurface_ds.cpp
       analysis/analysis.cpp
+      simulation/settings.cpp
       analysis/reader.cpp)
     target_link_libraries(isosurface_ds DataSpaces::DataSpaces ${VTK_LIBRARIES}
       MPI::MPI_C)
