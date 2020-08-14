@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include <vtkAppendPolyData.h>
+#include <vtkAppendFilter.h>
 #include <vtkImageData.h>
 #include <vtkImageImport.h>
 #include <vtkMarchingCubes.h>
@@ -9,6 +10,7 @@
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkXMLPUnstructuredGridWriter.h>
 
 #include "../common/timer.hpp"
 #include "analysis.h"
@@ -28,7 +30,7 @@ compute_isosurface(const Analysis &anly, const std::vector<double> &field, doubl
     importer->SetDataExtentToWholeExtent();
     importer->SetDataScalarTypeToDouble();
     importer->SetNumberOfScalarComponents(1);
-    importer->SetImportVoidPointer(const_cast<double *>((field.data()));
+    importer->SetImportVoidPointer(const_cast<double *>(field.data()));
 
     // Run the marching cubes algorithm
     auto mcubes = vtkSmartPointer<vtkMarchingCubes>::New();
@@ -143,7 +145,7 @@ int main(int argc, char **argv)
         auto appendFilter = vtkSmartPointer<vtkAppendFilter>::New();
 
         for (const auto isovalue : isovalues) {
-            auto polyData = compute_isosurface(varU, u, isovalue);
+            auto polyData = compute_isosurface(anly, anly.u_noghost(), isovalue);
             appendFilter->AddInputData(polyData);
         }
 
