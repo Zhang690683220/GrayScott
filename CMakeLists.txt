@@ -50,6 +50,7 @@ if (VTK)
     vtkFiltersGeneral
     vtkIOImage
     vtkIOXML
+    vtkIOParallelXML QUIET
   )
 
   if(VTK_FOUND)
