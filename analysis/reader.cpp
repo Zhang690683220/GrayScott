@@ -22,13 +22,13 @@ void Reader::read(const Analysis &analysis, int step)
 
     uint64_t lb[3] = {0}, ub[3] = {0};
 
-    lb[0] = sim.offset_x;
-    lb[1] = sim.offset_y;
-    lb[2] = sim.offset_z;
+    lb[0] = analysis.offset_x;
+    lb[1] = analysis.offset_y;
+    lb[2] = analysis.offset_z;
 
-    ub[0] = sim.offset_x+sim.size_x-1;
-    ub[1] = sim.offset_y+sim.size_y-1;
-    ub[2] = sim.offset_z+sim.size_z-1;
+    ub[0] = analysis.offset_x+analysis.size_x-1;
+    ub[1] = analysis.offset_y+analysis.size_y-1;
+    ub[2] = analysis.offset_z+analysis.size_z-1;
 
     MPI_Barrier(comm);
 

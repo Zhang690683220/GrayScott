@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "../simulation/gray-scott.h"
 #include "../simulation/settings.h"
+#include "analysis.h"
 #include "dataspaces.h"
 
 class Reader
