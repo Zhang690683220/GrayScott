@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 #endif
 
     //Init the writer
-    Writer dswriter(MPI_COMM_WORLD, procs, 1);
+    Writer dswriter(comm, procs, 1);
 
     for (int i = 0; i < settings.steps;) {
 #ifdef ENABLE_TIMERS

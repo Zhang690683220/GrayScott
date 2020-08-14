@@ -36,6 +36,33 @@ install(FILES
   # Need to install/export Dataspaces find module for downstream dependencies
   configure_file(cmake/Modules/FindDataSpaces.cmake Modules/FindDataSpaces.cmake COPYONLY)
 
+option(VTK "Build VTK apps")
+if (VTK_ROOT)
+  set(VTK ON)
+endif(VTK_ROOT)
+  
+if (VTK)
+  message(STATUS "Configuring VTK apps")
+  
+  find_package(VTK COMPONENTS
+    vtkCommonCore
+    vtkFiltersCore
+    vtkFiltersGeneral
+    vtkIOImage
+    vtkIOXML
+  )
+
+  if(VTK_FOUND)
+    add_executable(isosurface_ds
+      analysis/isosurface_ds.cpp
+      analysis/analysis.cpp
+      analysis/reader.cpp)
+    target_link_libraries(isosurface DataSpaces::DataSpaces ${VTK_LIBRARIES}
+      MPI::MPI_C)
+  endif(VTK_FOUND)
+
+  
+  endif(VTK)
 
 
 
