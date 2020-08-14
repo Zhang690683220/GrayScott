@@ -57,11 +57,11 @@ if (VTK)
       analysis/isosurface_ds.cpp
       analysis/analysis.cpp
       analysis/reader.cpp)
-    target_link_libraries(isosurface DataSpaces::DataSpaces ${VTK_LIBRARIES}
+    target_link_libraries(isosurface_ds DataSpaces::DataSpaces ${VTK_LIBRARIES}
       MPI::MPI_C)
   endif(VTK_FOUND)
 
-  
+
   endif(VTK)
 
 
