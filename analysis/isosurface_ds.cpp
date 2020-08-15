@@ -48,9 +48,9 @@ void write_vtk(const std::string &fname,
                const vtkSmartPointer<vtkPolyData> polyData,
                int rank, int timestep)
 {
-    std::string filename = fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtk";
+    std::string filename = "./output/" + fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtk";
     auto writer = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-    writer->SetFileName(fname.c_str());
+    writer->SetFileName(filename.c_str());
     writer->SetInputData(polyData);
     writer->Write();
 }
