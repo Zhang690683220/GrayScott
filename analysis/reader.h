@@ -14,7 +14,7 @@ class Reader
 public:
     Reader(MPI_Comm comm ,int proc, int appid);
     
-    void read(const Analysis &analysis, int step);
+    void read(const Analysis &analysis, MPI_Comm comm, int step);
     void close() { dspaces_finalize();}
 
 private:

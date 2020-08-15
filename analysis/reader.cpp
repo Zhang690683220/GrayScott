@@ -10,7 +10,7 @@ Reader::Reader(MPI_Comm comm ,int proc, int appid)
      dspaces_init(proc, appid, &comm, NULL);
 }
 
-void Reader::read(const Analysis &analysis, int step)
+void Reader::read(const Analysis &analysis, MPI_Comm comm, int step)
 {
 
 

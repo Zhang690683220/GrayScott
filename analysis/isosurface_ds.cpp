@@ -124,7 +124,7 @@ int main(int argc, char **argv)
                       << std::endl;
         }
 
-        dsreader.read(anly, i);
+        dsreader.read(anly, MPI_COMM_WORLD, i);
 
         auto appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
 
