@@ -44,11 +44,11 @@ compute_isosurface(const Analysis &anly, const std::vector<double> &field, doubl
     return mcubes->GetOutput();
 }
 
-void write_vtk(const std::string &fname,
+void write_vtp(const std::string &fname,
                const vtkSmartPointer<vtkPolyData> polyData,
                int rank, int timestep)
 {
-    std::string filename = "./output/" + fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtk";
+    std::string filename = "./output/" + fname + ".Rank." + std::to_string(rank) + ".Time." + std::to_string(timestep) + ".vtp";
     auto writer = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData(polyData);
@@ -136,7 +136,7 @@ int main(int argc, char **argv)
         appendFilter->Update();
 
         std::string fname = "grayscott_isosurface";
-        write_vtk(fname, appendFilter->GetOutput(),rank, i);
+        write_vtp(fname, appendFilter->GetOutput(),rank, i);
 
         
     }
