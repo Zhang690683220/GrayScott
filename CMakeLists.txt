@@ -11,6 +11,10 @@ find_package(MPI REQUIRED)
 
 find_package(DataSpaces REQUIRED)
 
+SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+
 
 option(USE_TIMERS "Use profiling timers")
 if(USE_TIMERS)
